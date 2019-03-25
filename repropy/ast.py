@@ -7,6 +7,10 @@ from abc import ABC,abstractmethod
 import struct
 import hashlib
 
+from .hashes import merklize
+
+# ----------------------------------------------------------------
+
 class Context(object):
     """
     Context for the analysis. It provides access to
@@ -129,29 +133,3 @@ class Literal(Node):
 
     def __repr__(self):
         return "Literal(%s)" % repr(self.val)
-    
-## ================================================================
-## Nodes in the AST
-## ================================================================
-
-merklization_list = [
-    (bytearray, lambda x: x),
-    (bool,      lambda b: struct.pack('b', b)),
-    (int,       lambda i: struct.pack('l', i)),
-    (float,     lambda x: struct.pack('d', x)),
-    (str,       lambda s: s.encode('utf-8')),
-]
-
-
-def merklize(node):
-    # AST nodes can calculate hashes by themselves
-    if isinstance(node, Node):
-        return node.hash()
-    # Otherwise we need to calculate literal hashes
-    acc = hashlib.sha256()
-    for i, (ty, toBytes) in enumerate(merklization_list):
-        if type(node) is ty:
-            acc.update( struct.pack('l', i) )
-            acc.update( toBytes(node) )
-            return acc.digest()
-    raise Exception("Cannot calculate hash for type " + str(type(node)))
