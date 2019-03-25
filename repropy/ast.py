@@ -8,6 +8,7 @@ import struct
 import hashlib
 
 from .hashes import merklize
+from .       import store
 
 # ----------------------------------------------------------------
 
@@ -16,9 +17,9 @@ class Context(object):
     Context for the analysis. It provides access to
     content-addressable storage
     """
-    def __init__(self, meta, store="."):
+    def __init__(self, meta, store_dir="./store"):
         self.meta  = meta
-        self.store = "."
+        self.store = store.Store(store_dir)
 
     def call(self, action, *args, **kwargs):
         """
@@ -33,23 +34,6 @@ class Context(object):
         kwargs = { k : to_arg(v) for k,v in kwargs.items() }
         return FunctionNode(self, action(self.meta), args, kwargs)
     
-    def has_hash(self, h):
-        """
-        Hash given hash in store
-        """
-        return False
-
-    def fetch(self, h):
-        """
-        Retrieve value from store
-        """
-        raise Exception("Not implemented")
-
-    def store(self, h, val):
-        """
-        Put value into store
-        """
-        pass
 
 ## ================================================================
 ## Nodes in the AST
@@ -84,7 +68,7 @@ class FunctionNode(Node):
         self.action = action
         self.args   = [] if args is None else args
         self.kwargs = {} if args is None else kwargs        
-        #
+        # Build Merkle tree from parameters
         acc = hashlib.sha256()
         acc.update( self.action.hash() )
         for a in args:
@@ -96,16 +80,19 @@ class FunctionNode(Node):
 
     def value(self):
         """
-        Evaluate node value
+        Evaluate node (or fetch value from cache if possible)
         """
         # Check whether value is cached
-        h = self.hash()
-        if self.ctx.has_hash(h):
-            return self.ctx.fetch(h)
+        h        = self.hash()
+        (val,ok) = self.ctx.store.fetch(h)
+        if ok:
+            return val
         # Evaluate arguments for the action
         args   = [ a.value()  for a   in self.args   ]
         kwargs = { k: v.value for k,v in self.kwargs }
-        return self.action(*args, **kwargs)
+        val    = self.action(*args, **kwargs)
+        self.ctx.store.store(h, val)
+        return val
 
     def hash(self):
         return self.h
