@@ -1,4 +1,0 @@
-
-
-class ModelParameterError(Exception):
-    pass
