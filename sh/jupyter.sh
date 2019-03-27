@@ -21,4 +21,5 @@ fi
 rm -rf .XDG/*
 
 # Install nbextensions
+cd notebook
 jupyter notebook --no-browser
