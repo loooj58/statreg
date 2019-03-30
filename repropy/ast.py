@@ -7,8 +7,10 @@ from abc import ABC,abstractmethod
 import struct
 import hashlib
 
-from .hashes import merklize
-from .       import store
+from .hashes      import merklize
+from .            import store
+from .dataclasses import Meta, NoMeta
+
 
 # ----------------------------------------------------------------
 
@@ -21,9 +23,22 @@ class Context(object):
         self.meta  = meta
         self.store = store.Store(store_dir)
 
+    def call0(self, action, *args, **kwargs):
+        """
+        Call function which doesnt receive any metadata
+        """
+        return self._call_raw(NoMeta(action), *args, **kwargs)
+
     def call(self, action, *args, **kwargs):
         """
-        Create delayed function call. Action is assumed to be 
+        Call function which receives metadata as first parameter
+        """
+        return self._call_raw(Meta(self.meta, action), *args, **kwargs)
+
+
+    def _call_raw(self, action, *args, **kwargs):
+        """
+        Create delayed function call. Action is assumed to be
         """
         def to_arg(a) :
             if isinstance(a, Node) :
@@ -32,8 +47,9 @@ class Context(object):
                 return Literal(a)
         args   = [ to_arg(a) for a in args ]
         kwargs = { k : to_arg(v) for k,v in kwargs.items() }
-        return FunctionNode(self, action(self.meta), args, kwargs)
-    
+        return FunctionNode(self, action, args, kwargs)
+
+
 
 ## ================================================================
 ## Nodes in the AST
@@ -67,7 +83,7 @@ class FunctionNode(Node):
         self.ctx    = ctx
         self.action = action
         self.args   = [] if args is None else args
-        self.kwargs = {} if args is None else kwargs        
+        self.kwargs = {} if args is None else kwargs
         # Build Merkle tree from parameters
         acc = hashlib.sha256()
         acc.update( self.action.hash() )
