@@ -55,7 +55,7 @@ in
 pkgs.mkShell {
   buildInputs = [ pyp ];
   shellHook   = ''
-    export PYTHONPATH=$PWD
+    export PYTHONPATH=$PWD:$PWD/unfolding
     export XDG_DATA_HOME=$PWD/.XDG
     export JUPYTER_CONFIG_DIR=$PWD/.XDG/jupyter
     '';
