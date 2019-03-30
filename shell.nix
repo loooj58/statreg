@@ -45,6 +45,7 @@ let
     matplotlib
     seaborn
     numpy
+    sympy
     scipy
     pandas
     #
