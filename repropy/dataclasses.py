@@ -1,10 +1,9 @@
 #!/usr/bin/python
 """
 """
-from dataclasses import is_dataclass, fields
+from dataclasses import is_dataclass, fields, MISSING
 import inspect
 import hashlib
-
 from .hashes import merklize_rec
 
 
@@ -20,6 +19,8 @@ def instantiate(cls, dct):
     for f in fields(cls):
         nm = f.name
         ty = f.type
+        if not (nm in dct) and f.default != MISSING:
+            continue
         if is_dataclass(ty) :
             par[nm] = instantiate(ty, dct[nm])
         else:
