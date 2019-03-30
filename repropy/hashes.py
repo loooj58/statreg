@@ -7,6 +7,7 @@ Hopefully there's better way to do this
 
 import struct
 import hashlib
+from dataclasses import fields, is_dataclass
 
 def merklize(x):
     """
@@ -15,7 +16,7 @@ def merklize(x):
     acc = hashlib.sha256()
     merklize_rec(acc, x)
     return acc.digest()
-    
+
 def merklize_rec(acc, x):
     """
     Hash given value. Hash is constructed incrementally using given
@@ -24,7 +25,12 @@ def merklize_rec(acc, x):
     ty = type(x)
     acc.update( ty.__module__.encode('utf-8') )
     acc.update( ty.__name__.encode('utf-8') )
-    lookup[ty](acc, x)
+    if is_dataclass(ty) :
+        for nm in sorted([ f.name for f in fields(ty) ]):
+            acc.update(nm.encode('utf-8'))
+            merklize_rec(acc, x.__dict__[nm])
+    else:
+        lookup[ty](acc, x)
 
 def hashing_bs(to_bs):
     "Compute hash of value using given serialization function"
@@ -40,7 +46,7 @@ def hashing_dict(acc, xs):
     for k,v in sorted(xs.items()):
         merklize_rec(k)
         merklize_rec(v)
-        
+
 # Lookup table or hashing algorithms
 lookup = {
     bytearray: hashing_bs(lambda x: x),
