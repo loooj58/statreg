@@ -40,9 +40,15 @@ class Context(object):
         Call function which receives metadata as first parameter
         """
         meta = self.meta
-        if meta_path is not None:
+        if meta_path is None:
+            pass
+        elif isinstance(meta_path, str):
+            meta = meta[meta_path]
+        elif isinstance(meta_path, list):
             for k in meta_path:
                 meta = meta[k]
+        else:
+            raise Exception("Invalid meta_path: " + str(meta_path))
         return self._call_raw(WithMeta(meta, action), *args,
                               meta_cheap=meta_cheap,
                               **kwargs)
@@ -114,15 +120,15 @@ class FunctionNode(Node):
         """
         # Check whether value is cached
         if not self.cheap:
-            h        = self.hash()
-            (val,ok) = self.ctx.store.fetch(h)
+            (val,ok) = self.ctx.store.fetch(self.hash())
             if ok:
                 return val
         # Evaluate arguments for the action
         args   = [ a.value()  for a   in self.args   ]
         kwargs = { k: v.value for k,v in self.kwargs }
         val    = self.action(*args, **kwargs)
-        self.ctx.store.store(h, val)
+        if not self.cheap:
+            self.ctx.store.store(self.hash(), val)
         return val
 
     def hash(self):
