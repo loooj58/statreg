@@ -23,19 +23,32 @@ class Context(object):
         self.meta  = meta
         self.store = store.Store(store_dir)
 
-    def call0(self, action, *args, meta_cheap=False, **kwargs):
+    def call0(self, action, *args,
+              meta_cheap=False, meta_path=None,
+              **kwargs):
         """
         Call function which doesnt receive any metadata
         """
-        return self._call_raw(NoMeta(action), meta_cheap=meta_cheap, *args, **kwargs)
+        return self._call_raw(NoMeta(action), *args,
+                              meta_cheap=meta_cheap,
+                              **kwargs)
 
-    def call(self, action, *args, meta_cheap=False, **kwargs):
+    def call(self, action, *args,
+             meta_cheap=False, meta_path=None,
+             **kwargs):
         """
         Call function which receives metadata as first parameter
         """
-        return self._call_raw(WithMeta(self.meta, action), meta_cheap=meta_cheap, *args, **kwargs)
+        meta = self.meta
+        if meta_path is not None:
+            for k in meta_path:
+                meta = meta[k]
+        return self._call_raw(WithMeta(meta, action), *args,
+                              meta_cheap=meta_cheap,
+                              **kwargs)
 
-    def _call_raw(self, action, *args, meta_cheap=False, **kwargs):
+    def _call_raw(self, action, *args,
+                  meta_cheap=False, **kwargs):
         """
         Create delayed function call. Action is assumed to be
         """
