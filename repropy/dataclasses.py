@@ -1,12 +1,14 @@
 #!/usr/bin/python
 """
 """
-from dataclasses import is_dataclass, fields, MISSING
-import inspect
+from   dataclasses import is_dataclass, fields, MISSING
+import copy
 import hashlib
+import inspect
 import marshal
 from .hashes import merklize_rec
 
+## ----------------------------------------------------------------
 
 def instantiate(cls, dct):
     """
@@ -27,6 +29,33 @@ def instantiate(cls, dct):
         else:
             par[nm] = dct[nm]
     return cls(**par)
+
+class Meta(dict):
+    """
+    Extension of dicctionary which allows sensisble merging of metadata
+    """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def __add__(self, other):
+        def to_meta(val):
+            if isinstance(val, Meta):
+                return val
+            if isinstance(val, dict):
+                return Meta(**val)
+            raise Exception("Cannot convert nondictionary to ")
+        new = copy.copy(self)
+        for k,v in other.items() :
+            if k in new :
+                a = new[k]
+                if isinstance(a, dict) or isinstance(v, dict):
+                    new[k] = to_meta(a) + to_meta(v)
+                else:
+                    new[k] = v
+            else:
+                new[k] = v
+        return new
+
 
 class NoMeta(object):
     """
