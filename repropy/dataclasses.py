@@ -47,7 +47,7 @@ class NoMeta(object):
         return self.h
 
 
-class Meta(object):
+class WithMeta(object):
     """
     Wrapper class which actually uses metadata
     """

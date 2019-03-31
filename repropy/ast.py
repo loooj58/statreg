@@ -9,7 +9,7 @@ import hashlib
 
 from .hashes      import merklize
 from .            import store
-from .dataclasses import Meta, NoMeta
+from .dataclasses import WithMeta, NoMeta
 
 
 # ----------------------------------------------------------------
@@ -33,7 +33,7 @@ class Context(object):
         """
         Call function which receives metadata as first parameter
         """
-        return self._call_raw(Meta(self.meta, action), *args, **kwargs)
+        return self._call_raw(WithMeta(self.meta, action), *args, **kwargs)
 
 
     def _call_raw(self, action, *args, **kwargs):
