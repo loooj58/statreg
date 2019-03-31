@@ -134,6 +134,8 @@ class FunctionNode(Node):
     def hash(self):
         return self.h
 
+    def meta(self):
+        return self.action.meta
 
 class Literal(Node):
     """
@@ -151,6 +153,9 @@ class Literal(Node):
 
     def hash(self):
         return self.h
+
+    def meta(self):
+        return Meta()
 
     def __str__(self):
         return "Literal(%s)" % str(self.val)
