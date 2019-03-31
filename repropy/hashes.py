@@ -49,6 +49,7 @@ def hashing_dict(acc, xs):
 
 # Lookup table or hashing algorithms
 lookup = {
+    type(None): lambda bs,x: None,
     bytearray: hashing_bs(lambda x: x),
     bool:      hashing_bs(lambda b: struct.pack('b', b)),
     int:       hashing_bs(lambda i: struct.pack('l', i)),
