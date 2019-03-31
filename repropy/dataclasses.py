@@ -65,7 +65,7 @@ class NoMeta(object):
         acc = hashlib.sha256()
         acc.update( fun.__module__.encode('utf-8') )
         acc.update( fun.__name__.encode('utf-8') )
-        acc.update( marshal.dumps(fun.__code_) )
+        acc.update( marshal.dumps(fun.__code__) )
         self.h   = acc.digest()
         self.fun = fun
 
