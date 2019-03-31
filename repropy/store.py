@@ -30,8 +30,12 @@ class Store(object):
         Store value
         """
         nm = self._path(h)
+        # NOTE: We try to serialize object before we create file!
+        #       Otherwise unserializable object will leave empty file
+        #       in store
+        bs = pickle.dumps(val)
         with open(nm,'wb') as h:
-            pickle.dump(val, h)
+            h.write(bs)
 
     def _path(self, h):
         s  = base64.urlsafe_b64encode(h).decode('utf-8').replace('=', '')
