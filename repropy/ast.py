@@ -23,20 +23,19 @@ class Context(object):
         self.meta  = meta
         self.store = store.Store(store_dir)
 
-    def call0(self, action, *args, **kwargs):
+    def call0(self, action, *args, meta_cheap=False, **kwargs):
         """
         Call function which doesnt receive any metadata
         """
-        return self._call_raw(NoMeta(action), *args, **kwargs)
+        return self._call_raw(NoMeta(action), meta_cheap=meta_cheap, *args, **kwargs)
 
-    def call(self, action, *args, **kwargs):
+    def call(self, action, *args, meta_cheap=False, **kwargs):
         """
         Call function which receives metadata as first parameter
         """
-        return self._call_raw(WithMeta(self.meta, action), *args, **kwargs)
+        return self._call_raw(WithMeta(self.meta, action), meta_cheap=meta_cheap, *args, **kwargs)
 
-
-    def _call_raw(self, action, *args, **kwargs):
+    def _call_raw(self, action, *args, meta_cheap=False, **kwargs):
         """
         Create delayed function call. Action is assumed to be
         """
@@ -47,7 +46,9 @@ class Context(object):
                 return Literal(a)
         args   = [ to_arg(a) for a in args ]
         kwargs = { k : to_arg(v) for k,v in kwargs.items() }
-        return FunctionNode(self, action, args, kwargs)
+        node   = FunctionNode(self, action, args, kwargs)
+        node.cheap = meta_cheap
+        return node
 
 
 
@@ -99,10 +100,11 @@ class FunctionNode(Node):
         Evaluate node (or fetch value from cache if possible)
         """
         # Check whether value is cached
-        h        = self.hash()
-        (val,ok) = self.ctx.store.fetch(h)
-        if ok:
-            return val
+        if not self.cheap:
+            h        = self.hash()
+            (val,ok) = self.ctx.store.fetch(h)
+            if ok:
+                return val
         # Evaluate arguments for the action
         args   = [ a.value()  for a   in self.args   ]
         kwargs = { k: v.value for k,v in self.kwargs }
