@@ -18,7 +18,7 @@ def transmissionLinear(prec) :
             return (e - V) / dV
     return fun
 
-def tranmissionConvolved(prec, sigma) :
+def transmissionConvolved(prec, sigma) :
     """
     Convolution of piecewise linear approximation of transition
     function with jitter of electron gun. See notebook

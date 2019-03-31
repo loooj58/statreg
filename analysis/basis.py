@@ -8,8 +8,7 @@ import numpy           as np
 import unfolding       as lib
 import unfolding.basis as libB
 
-from .datasets            import Dataset
-from .numass.transmission import transmissionLinear, tranmissionConvolved
+from .numass.transmission import transmissionLinear, transmissionConvolved
 
 
 ## ----------------------------------------------------------------
@@ -20,6 +19,9 @@ class Dataset:
     dv_prec   : float
     el_gun_E  : float
     gun_sigma : Optional[float]
+    drop_init : Optional[int] = None
+    drop_last : Optional[int] = None
+
 
 def read_spectrum(meta : Dataset) :
     "Read measured spectrum"
@@ -29,7 +31,14 @@ def read_spectrum(meta : Dataset) :
              ]
         ls = [ l.split() for l in ls ]
         ls = [ (float(l[0]), float(l[-2]), float(l[-1])) for l in ls ]
-        return pd.DataFrame.from_records( ls, columns=['vs', 'cnt', 'err'])
+        df = pd.DataFrame.from_records( ls, columns=['vs', 'cnt', 'err'])
+        # Drop parts of data
+        off1 = meta.drop_init
+        off2 = None if meta.drop_last is None else -meta.drop_last
+        # Normalize counts since  our kernel imply that we continue 
+        df = df[off1:off2]
+        df['cnt'] -= df['cnt'].values[-1]
+        return df
 
     
 ## ----------------------------------------------------------------
@@ -67,6 +76,10 @@ def make_unfolding(meta: UnfoldingSpec, basis, dat):
     if meta.transmission == "linear":
         prec = meta.dataset.dv_prec        
         fun  = transmissionLinear(prec)
+    elif meta.transmission == "folded":
+        prec = meta.dataset.dv_prec
+        gunS = meta.dataset.gun_sigma
+        fun  = transmissionConvolved(prec, gunS)
     else:
         raise Exception("Unknown transmission function: " ++ meta.transmission)
     dat = lib.Dataset(xs = dat['vs'].values,
