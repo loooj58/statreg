@@ -13,11 +13,11 @@ let
     libgpuarray = super.libgpuarray.override {
       openclSupport = false;
     };
-#    Theano = self.callPackage ./nix/Theano.nix rec {
-#      cudaSupport = self.config.cudaSupport or false;
-#      cudnnSupport = cudaSupport;
-#      inherit (pkgs.linuxPackages) nvidia_x11;
-#    };
+    Theano = self.callPackage ./nix/Theano.nix rec {
+      cudaSupport = self.config.cudaSupport or false;
+      cudnnSupport = cudaSupport;
+      inherit (pkgs.linuxPackages) nvidia_x11;
+    };
     # Disable tests in some packages
     #
     cython = super.cython.overridePythonAttrs(old: rec {
