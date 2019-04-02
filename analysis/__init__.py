@@ -2,5 +2,5 @@
 """
 """
 
-from . import basis
+from . import analytic
 

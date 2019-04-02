@@ -6,7 +6,6 @@ from typing      import Optional
 import pandas as pd
 import numpy           as np
 import unfolding       as lib
-import unfolding.basis as libB
 
 from .numass.transmission import transmissionLinear, transmissionConvolved
 
@@ -15,6 +14,9 @@ from .numass.transmission import transmissionLinear, transmissionConvolved
 
 @dataclass
 class Dataset:
+    """
+    Information about dataset
+    """
     dataset   : str
     dv_prec   : float
     el_gun_E  : float
@@ -23,7 +25,7 @@ class Dataset:
     drop_last : Optional[int] = None
 
 
-def read_spectrum(meta : Dataset) :
+def read_spectrum(meta : Dataset) -> lib.Dataset:
     "Read measured spectrum"
     with open(meta.dataset) as f :
         ls = [ l for l in f.readlines()
@@ -35,21 +37,24 @@ def read_spectrum(meta : Dataset) :
         # Drop parts of data
         off1 = meta.drop_init
         off2 = None if meta.drop_last is None else -meta.drop_last
-        # Normalize counts since  our kernel imply that we continue 
+        # Normalize counts since  our kernel imply that we continue
         df = df[off1:off2]
         df['cnt'] -= df['cnt'].values[-1]
         return df
 
-    
+
 ## ----------------------------------------------------------------
 
 @dataclass
 class BasisSpec:
+    """
+    Specification of basis which is derived from dataset
+    """
     dirichletA : bool = True # f(a) = 0
     dirichletB : bool = True # f(b) = 0
-    oversample : int  = 1  # How much oversample
+    oversample : int  = 1    # How much oversample
 
-def make_basis(meta : BasisSpec, data):
+def make_basis(meta : BasisSpec, data: lib.Dataset) -> lib.Basis:
     "Create basis for subsequent unfolding"
     assert(meta.dirichletA)
     assert(meta.dirichletB)
@@ -67,14 +72,21 @@ def make_basis(meta : BasisSpec, data):
 
 ## ----------------------------------------------------------------
 
+
 @dataclass
 class UnfoldingSpec:
-    dataset:      Dataset
-    transmission: str
+    """
+    Specifiction of uunfolding
+    """
+    dataset:      Dataset # Dataset being used
+    transmission: str     # transmission function
 
-def make_unfolding(meta: UnfoldingSpec, basis, dat):
+def make_unfolding(meta: UnfoldingSpec, basis: lib.Basis, dat: lib.Dataset) -> lib.Unfolding:
+    """
+    Generate unfolding object
+    """
     if meta.transmission == "linear":
-        prec = meta.dataset.dv_prec        
+        prec = meta.dataset.dv_prec
         fun  = transmissionLinear(prec)
     elif meta.transmission == "folded":
         prec = meta.dataset.dv_prec
@@ -92,9 +104,11 @@ def make_unfolding(meta: UnfoldingSpec, basis, dat):
 
 ## ----------------------------------------------------------------
 
-def calc_alpha(unf):
+def calc_alpha(unf: lib.Unfolding) -> lib.PhiVec:
+    "Calculate optimal alpha for unfolding"
     return unf.optimal_alpha()
 
-def calc_deconvolve(unf, alpha):
+def calc_deconvolve(unf: lib.Unfolding, alpha: float):
+    "Perform unfolding"
     res,sigR  = unf.deconvolve(alpha)
     return lib.PhiVec(res, unf.basis, sigR)
