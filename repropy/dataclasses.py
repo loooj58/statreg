@@ -6,6 +6,7 @@ import copy
 import hashlib
 import inspect
 import marshal
+import typing
 from .hashes import merklize_rec
 
 ## ----------------------------------------------------------------
@@ -26,6 +27,9 @@ def instantiate(cls, dct):
             continue
         if is_dataclass(ty) :
             par[nm] = instantiate(ty, dct[nm])
+        elif getattr(ty, "__origin__", None) is list :
+            tyArg = ty.__args__[0]
+            par[nm] = [instantiate(tyArg, d) for d in dct[nm]]
         else:
             par[nm] = dct[nm]
     return cls(**par)
@@ -43,7 +47,7 @@ class Meta(dict):
                 return val
             if isinstance(val, dict):
                 return Meta(**val)
-            raise Exception("Cannot convert nondictionary to ")
+            raise Exception("Cannot convert " + str(type(val)) + " Meta")
         new = copy.copy(self)
         for k,v in other.items() :
             if k in new :
