@@ -2,7 +2,7 @@
 """
 """
 from dataclasses import dataclass
-from typing      import Optional
+from typing      import Optional,List
 import pandas as pd
 import numpy           as np
 import unfolding       as lib
@@ -56,8 +56,6 @@ class BasisSpec:
 
 def make_basis(meta : BasisSpec, data: lib.Dataset) -> lib.Basis:
     "Create basis for subsequent unfolding"
-    assert(meta.dirichletA)
-    assert(meta.dirichletB)
     assert(type(meta.oversample) is int)
     assert(meta.oversample > 0)
     #
@@ -67,20 +65,30 @@ def make_basis(meta : BasisSpec, data: lib.Dataset) -> lib.Basis:
             [knots] +
              [ np.linspace(knots[i], knots[i+1], meta.oversample, endpoint=False)[1:]
                for i in range(len(knots) - 1)]))
-    return lib.CubicSplines(knots, "dirichlet")
+    bndA = "dirichlet" if meta.dirichletA else None
+    bndB = "dirichlet" if meta.dirichletB else None
+    return lib.CubicSplines(knots, (bndA,bndB))
 
 
 ## ----------------------------------------------------------------
 
 
 @dataclass
+class OmegaSpec:
+    "Specififcation of regularization matrix"
+    kind:     str
+    deg:      Optional[int]
+    equalize: Optional[bool]
+
+@dataclass
 class UnfoldingSpec:
     """
     Specifiction of uunfolding
     """
-    dataset:      Dataset # Dataset being used
-    transmission: str     # transmission function
-
+    dataset:      Dataset         # Dataset being used
+    transmission: str             # transmission function
+    omega:        List[OmegaSpec] # Regulariztion matrices
+    
 def make_unfolding(meta: UnfoldingSpec, basis: lib.Basis, dat: lib.Dataset) -> lib.Unfolding:
     """
     Generate unfolding object
@@ -98,7 +106,14 @@ def make_unfolding(meta: UnfoldingSpec, basis: lib.Basis, dat: lib.Dataset) -> l
                       ys = dat['cnt'].values,
                       sig= dat['err'].values,)
     # We need monkeypatch function out from unfolding object
-    unf = lib.Unfolding( fun, basis, dat, [lib.omega(2)], )
+    def to_omega(o):
+        if o.kind == "omega":
+            return lib.omega(o.deg, equalize=o.equalize)
+        if o.kind == "boundary":
+            return lib.boundaryAB()
+        raise Exception("Cannot calculate omega")
+    omegas = [ to_omega(o) for o in meta.omega ]
+    unf = lib.Unfolding( fun, basis, dat, omegas, )
     delattr(unf, 'Kfun')
     return unf
 
