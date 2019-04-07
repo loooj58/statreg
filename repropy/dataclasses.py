@@ -16,23 +16,48 @@ def instantiate(cls, dct):
     Create dataclass from dictionary. All unused elements from
     dictionary are discarded
     """
-    if not is_dataclass(cls):
-        raise Exception(str(cls) + " is not a dataclass")
-    # Build parameters
-    par = {}
-    for f in fields(cls):
-        nm = f.name
-        ty = f.type
-        if not (nm in dct) and f.default != MISSING:
-            continue
-        if is_dataclass(ty) :
-            par[nm] = instantiate(ty, dct[nm])
-        elif getattr(ty, "__origin__", None) is list :
-            tyArg = ty.__args__[0]
-            par[nm] = [instantiate(tyArg, d) for d in dct[nm]]
-        else:
-            par[nm] = dct[nm]
-    return cls(**par)
+    # Dataclasses are instantiated from dictionaries
+    if is_dataclass(cls) :
+        par = {}
+        for f in fields(cls):
+            nm = f.name
+            ty = f.type
+            # Skip instantiation of missing fields with default value
+            if not (nm in dct) and f.default != MISSING:
+                continue
+            # Otherwise instantiate value from dict
+            par[nm] = instantiate(ty, dct.get(nm))
+        return cls(**par)
+    # Lists are instantiated from iterables
+    if getattr(cls, "__origin__", None) is list :
+        tyArg = cls.__args__[0]
+        return [instantiate(tyArg, d) for d in dct]
+    # Unions.
+    if getattr(cls, "__origin__", None) is typing.Union :
+        for ty in cls.__args__:
+            # Dataclasses require tags which are names of data type
+            if is_dataclass(ty):
+                if ty.__name__ == dct.get("%tag") :
+                    return instantiate(ty, dct)
+                else:
+                    continue
+            # None always succeeds. Note that Optional[a] ~ Union[a,NoneType]
+            # so this approach works
+            if ty is type(None):
+                return None
+            # Otherwise pick first match
+            if issubclass(type(dct), ty):
+                return dct
+        raise InstantiationError("Cannot instantiate %s from %s" % (cls,dct))
+    # All else fails
+    if issubclass(type(dct), cls):
+        return dct
+    raise InstantiationError("Cannot instantiate %s from %s" % (cls,dct))
+
+class InstantiationError(Exception):
+    def __init__(self, str):
+        super().__init__(str)
+
 
 class Meta(dict):
     """

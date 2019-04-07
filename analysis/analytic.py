@@ -2,7 +2,7 @@
 """
 """
 from dataclasses import dataclass
-from typing      import Optional,List
+from typing      import Optional,List,Union
 import pandas as pd
 import numpy           as np
 import unfolding       as lib
@@ -87,11 +87,16 @@ def make_basis(meta : BasisSpec, data: lib.Dataset) -> lib.Basis:
 
 
 @dataclass
-class OmegaSpec:
+class OmegaIntSpec:
     "Specififcation of regularization matrix"
-    kind:     str
     deg:      Optional[int]
     equalize: Optional[bool]
+
+@dataclass
+class OmegaBndSpec:
+    "Boundary regularization"
+    pass
+
 
 @dataclass
 class UnfoldingSpec:
@@ -100,8 +105,9 @@ class UnfoldingSpec:
     """
     dataset:      Dataset         # Dataset being used
     transmission: str             # transmission function
-    omega:        List[OmegaSpec] # Regulariztion matrices
-    
+    # Regulariztion matrices
+    omega:        List[Union[OmegaIntSpec,OmegaBndSpec]]
+
 def make_unfolding(meta: UnfoldingSpec, basis: lib.Basis, dat: lib.Dataset) -> lib.Unfolding:
     """
     Generate unfolding object
@@ -120,9 +126,9 @@ def make_unfolding(meta: UnfoldingSpec, basis: lib.Basis, dat: lib.Dataset) -> l
                       sig= dat['err'].values,)
     # We need monkeypatch function out from unfolding object
     def to_omega(o):
-        if o.kind == "omega":
+        if isinstance(o, OmegaIntSpec):
             return lib.omega(o.deg, equalize=o.equalize)
-        if o.kind == "boundary":
+        if isinstance(o, OmegaBndSpec):
             return lib.boundaryAB()
         raise Exception("Cannot calculate omega")
     omegas = [ to_omega(o) for o in meta.omega ]

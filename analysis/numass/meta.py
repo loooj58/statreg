@@ -8,7 +8,7 @@ from repropy import Meta
 dataset_2011 = Meta(
     dataset   = '../data/G18_loss.out',
     dv_prec   = 1.9e-05,
-    el_gun_E  = 18700,
+    el_gun_E  = 18700.0,
     gun_sigma = 0.27179
 )
 dataset_2014H2 = Meta(
