@@ -36,7 +36,7 @@ def instantiate(cls, dct):
 
 class Meta(dict):
     """
-    Extension of dicctionary which allows sensisble merging of metadata
+    Extension of dictionary which allows sensisble merging of metadata
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -48,6 +48,10 @@ class Meta(dict):
             if isinstance(val, dict):
                 return Meta(**val)
             raise Exception("Cannot convert " + str(type(val)) + " Meta")
+        tagA = self.get("%tag")
+        tagB = other.get("%tag")
+        if tagA != tagB:
+            raise Exception("Tag mismatch: %s + %s" % (tagA,tagB))
         new = copy.copy(self)
         for k,v in other.items() :
             if k in new :
@@ -60,6 +64,15 @@ class Meta(dict):
                 new[k] = v
         return new
 
+class Tagged(Meta):
+    """
+    Metadata with tag attached
+    """
+    def __init__(self, tag, **kwargs):
+        self["%tag"] = tag
+        super().__init__(**kwargs)
+
+################################################################
 
 class NoMeta(object):
     """

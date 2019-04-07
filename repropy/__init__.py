@@ -2,5 +2,5 @@
 """
 """
 
-from .dataclasses import Meta
+from .dataclasses import Meta, Tagged
 from .ast         import Context
