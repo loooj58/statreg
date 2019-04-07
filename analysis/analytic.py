@@ -10,6 +10,19 @@ import unfolding       as lib
 from .numass.transmission import transmissionLinear, transmissionConvolved
 
 
+class Analytic:
+    def __init__(self, ctx):
+        self.ctx    = ctx
+        #
+        self.dat    = ctx.call( read_spectrum,
+                                meta_cheap=True, meta_path='dataset')
+        self.basis  = ctx.call( make_basis, self.dat,
+                                meta_cheap=True, meta_path='basis')
+        self.unfold = ctx.call( make_unfolding, self.basis, self.dat)
+        self.alpha  = ctx.call0( calc_alpha, self.unfold)
+        self.phi    = ctx.call0( calc_deconvolve, self.unfold, self.alpha)
+
+
 ## ----------------------------------------------------------------
 
 @dataclass
