@@ -112,26 +112,21 @@ def plot_Omega_eigenvalues(r) :
     C   = evals[0]/evals[-1]
     plt.title("cond. number = %.2e" % (C,))
 
-def plot_alpha(unfold, alpha=None):
+def plot_alpha(unfold, posterior, logN=None):
     """
     Likelihood plot for α
     """
-    assert len(unfold.omegas) == 1
-    assert alpha is None or len(alpha) == 1
-    #
-    if alpha is None:
-        aMax = r.conv.optimal_alpha()[0]
-    else:
-        aMax = alpha[0]
-    pMax = unfold.alpha_prob([aMax])
-
-    a1_1 = ridder(lambda x : unfold.alpha_prob([x]) - pMax + 0.5, aMax/10, aMax)
-    a2_1 = ridder(lambda x : unfold.alpha_prob([x]) - pMax + 0.5, aMax, aMax*10)
-    a1_2 = ridder(lambda x : unfold.alpha_prob([x]) - pMax + 2, aMax/10, aMax)
-    a2_2 = ridder(lambda x : unfold.alpha_prob([x]) - pMax + 2, aMax, aMax*10)
-    aa   = np.linspace(a1_2, a2_2)
+    (a1_1,a2_1) = posterior.ci1Sigma
+    (a1_2,a2_2) = posterior.ci2Sigma
+    aa          = np.linspace(a1_2, a2_2)
+    aMax        = posterior.aMax
+    pMax        = unfold.alpha_prob([aMax])
     plt.figure()
     plt.plot(aa, [unfold.alpha_prob([a1]) - pMax for a1 in aa])
+    if logN is not None:
+        for l in logN:
+            print(l.mu,l.sig)
+            plt.plot(aa, l.logpdf(aa, normed=True),'--')
     plt.grid()
     plt.axvline(aMax, c='red')
     plt.axvline(a1_1, c='b')

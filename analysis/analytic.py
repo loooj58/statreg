@@ -4,8 +4,10 @@
 from dataclasses import dataclass
 from typing      import Optional,List,Union
 import pandas as pd
-import numpy           as np
-import unfolding       as lib
+import numpy          as np
+from   numpy          import exp,log,expm1,sqrt
+from   scipy.optimize import ridder,newton
+import unfolding      as lib
 
 from .numass.transmission import transmissionLinear, transmissionConvolved
 
@@ -146,3 +148,60 @@ def calc_deconvolve(unf: lib.Unfolding, alpha: float):
     "Perform unfolding"
     res,sigR  = unf.deconvolve(alpha)
     return lib.PhiVec(res, unf.basis, sigR)
+
+## ----------------------------------------------------------------
+
+class Lognorm():
+    """
+    Sort-of lognormal distirbution
+    """
+    def __init__(self, mu, sig):
+        self.mu  = mu
+        self.sig = sig
+        self.modeP = self.logpdf(self.mode())
+
+    def logpdf(self, xs, normed=False):
+        mu   = self.mu
+        sig  = self.sig
+        logP = - (np.log(xs) - mu)**2/(2*sig**2) - np.log(xs)
+        if normed:
+            logP -= self.modeP
+        return logP
+
+    def mode(self):
+        return exp(self.mu - self.sig**2)
+
+
+class AlphaPosterior:
+    """
+    Information about posterior of alpha
+    """
+    def __init__(self, unfold: lib.Unfolding, alpha):
+        assert len(unfold.omegas) == 1
+        assert alpha is None or len(alpha) == 1
+        # ----
+        self.aMax   = alpha[0]
+        self.unfold = unfold
+        aMax = alpha[0]
+        pMax = unfold.alpha_prob(alpha)
+        # Calculate credible intervals for α
+        self.ci1Sigma = (
+            ridder(lambda x : unfold.alpha_prob([x]) - pMax + 0.5, aMax/10, aMax),
+            ridder(lambda x : unfold.alpha_prob([x]) - pMax + 0.5, aMax, aMax*10),
+        )
+        self.ci2Sigma = (
+            ridder(lambda x : unfold.alpha_prob([x]) - pMax + 2, aMax/10, aMax),
+            ridder(lambda x : unfold.alpha_prob([x]) - pMax + 2, aMax, aMax*10),
+        )
+
+    def lognormal(self, scale=1):
+        """
+        Calculate lognormal approximation
+        """
+        def lognorm_sig(s):
+            return expm1(s**2) * np.exp(2*log(self.aMax) + 3 * s**2)
+        (a1,a2) = self.ci1Sigma
+        s0    = scale * (a2 - a1) / 2
+        sigma = newton( lambda s: lognorm_sig(s) - (2*s0)**2, 1)
+        mu    = np.log(self.aMax) + sigma**2
+        return Lognorm(mu, sigma)
