@@ -7,6 +7,7 @@ import hashlib
 import inspect
 import marshal
 import typing
+import types
 from .hashes import merklize_rec
 
 ## ----------------------------------------------------------------
@@ -99,15 +100,33 @@ class Tagged(Meta):
 
 ################################################################
 
+def hash_function(acc, fun):
+    acc.update( fun.__module__.encode('utf-8') )
+    acc.update( fun.__name__.encode('utf-8') )
+    # If function has code field - use if
+    code = getattr(fun, "__code__",None)
+    if code is not None:
+        acc.update( marshal.dumps(fun.__code__) )
+        return
+    # Otherwise it's class. Deal with it. Or try
+    for k,v in sorted(fun.__dict__.items()):
+        if k in ["__doc__", "__dict__","__weakref__","__module__"]:
+            continue
+        acc.update( k.encode('utf-8') )
+        if isinstance(v, types.FunctionType):
+            acc.update(marshal.dumps(v.__code__))
+        else:
+            merklize_rec(acc, v)
+
+
+
 class NoMeta(object):
     """
     Wrapper class for functions which does not make use of metadata
     """
     def __init__(self, fun):
         acc = hashlib.sha256()
-        acc.update( fun.__module__.encode('utf-8') )
-        acc.update( fun.__name__.encode('utf-8') )
-        acc.update( marshal.dumps(fun.__code__) )
+        hash_function(acc, fun)
         self.h   = acc.digest()
         self.fun = fun
 
@@ -124,9 +143,7 @@ class WithMeta(object):
     """
     def __init__(self, meta, fun):
         acc = hashlib.sha256()
-        acc.update( fun.__module__.encode('utf-8') )
-        acc.update( fun.__name__.encode('utf-8') )
-        acc.update( marshal.dumps(fun.__code__) )
+        hash_function(acc, fun)
         # Introspect function and construct metadata object from
         # complete metadata
         pars      = inspect.getfullargspec(fun)
