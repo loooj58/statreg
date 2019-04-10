@@ -23,7 +23,7 @@ class Analytic:
         self.unfold = ctx.call( make_unfolding, self.basis, self.dat)
         self.alpha  = ctx.call0( calc_alpha, self.unfold)
         self.phi    = ctx.call0( calc_deconvolve, self.unfold, self.alpha)
-
+        self.aPost  = ctx.call0( AlphaPosterior,  self.unfold, self.alpha)
 
 ## ----------------------------------------------------------------
 
