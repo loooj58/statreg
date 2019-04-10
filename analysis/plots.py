@@ -7,6 +7,7 @@ import numpy             as np
 from   scipy.optimize import ridder
 import matplotlib.pyplot as plt
 import matplotlib
+import unfolding as lib
 
 def plot_measurements(unf, phi=None, coef=None, xlim=None) :
     """
@@ -121,7 +122,7 @@ def plot_alpha(unfold, posterior, logN=None):
     aa          = np.linspace(a1_2, a2_2)
     aMax        = posterior.aMax
     pMax        = unfold.alpha_prob([aMax])
-    plt.figure()
+    fig = plt.figure()
     plt.plot(aa, [unfold.alpha_prob([a1]) - pMax for a1 in aa])
     if logN is not None:
         for l in logN:
@@ -132,3 +133,40 @@ def plot_alpha(unfold, posterior, logN=None):
     plt.axvline(a1_1, c='b')
     plt.axvline(a2_1, c='b')
     plt.title(u"α = %.3e - %.2e + %.2e" % (aMax,aMax-a1_1,a2_1-aMax))
+    return fig
+
+def plot_deconvolved_mcmc(aa, trace, only_mean=False, add=True, xlim=None) :
+    "Plot deconvolved function and pointwise errors"
+    vs   = np.linspace(aa.dat.value()['vs'].values[0], aa.dat.value()['vs'].values[-1], 500)
+    phi  = lib.PhiVec(np.average(trace['phi'], axis=0), aa.basis.value(), np.cov(trace['phi'], rowvar=False))
+    ys   = phi(vs)
+    dy   = np.asarray([phi.error(v) for v in vs])
+    gunE = aa.dat.meta().el_gun_E
+    #
+    if add :
+        fig = plt.figure()
+        plt.title('Deconvolution result')
+    else:
+        fig = None
+    plt.plot(gunE - vs, ys, 'r')
+    #Confidence intervals
+    if not only_mean :
+        plt.plot(gunE - aa.dat.value()['vs'].values, phi(aa.dat.value()['vs'].values), 'g.')
+        plt.fill_between(gunE - vs, ys-dy, ys+dy, color='b', alpha=0.5)
+    # Limits
+    if fig is not None and xlim is not None:
+        fig.axes[0].set_xlim(xlim)
+        fig.axes[1].set_xlim(xlim)
+    plt.grid()
+    return fig
+
+def plot_measurements_mcmc(aa, trace, xlim=None) :
+    """
+    Plot data and convolution of restored function side by side.
+
+    Optional parameters:
+      - phi:  reconstructed vector
+      - coef: coefficients for restored vector
+    """
+    phi = lib.PhiVec(np.average(trace['phi'], axis=0), aa.basis.value(), np.cov(trace['phi'], rowvar=False))
+    plot_measurements(aa.unfold.value(), phi, xlim=xlim)
