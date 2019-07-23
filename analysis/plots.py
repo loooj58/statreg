@@ -126,7 +126,6 @@ def plot_alpha(unfold, posterior, logN=None):
     plt.plot(aa, [unfold.alpha_prob([a1]) - pMax for a1 in aa])
     if logN is not None:
         for l in logN:
-            print(l.mu,l.sig)
             plt.plot(aa, l.logpdf(aa, normed=True),'--')
     plt.grid()
     plt.axvline(aMax, c='red')
@@ -135,10 +134,11 @@ def plot_alpha(unfold, posterior, logN=None):
     plt.title(u"α = %.3e - %.2e + %.2e" % (aMax,aMax-a1_1,a2_1-aMax))
     return fig
 
-def plot_deconvolved_mcmc(aa, trace, only_mean=False, add=True, xlim=None) :
+def plot_deconvolved_mcmc(aa, trace, only_mean=False, add=True, xlim=None, ylim=None, colstr='r') :
     "Plot deconvolved function and pointwise errors"
     vs   = np.linspace(aa.dat.value()['vs'].values[0], aa.dat.value()['vs'].values[-1], 500)
-    phi  = lib.PhiVec(np.average(trace['phi'], axis=0), aa.basis.value(), np.cov(trace['phi'], rowvar=False))
+    coef = np.average(trace['phi'], axis=0)
+    phi  = lib.PhiVec(coef, aa.basis.value(), np.cov(trace['phi'], rowvar=False))
     ys   = phi(vs)
     dy   = np.asarray([phi.error(v) for v in vs])
     gunE = aa.dat.meta().el_gun_E
@@ -148,15 +148,22 @@ def plot_deconvolved_mcmc(aa, trace, only_mean=False, add=True, xlim=None) :
         plt.title('Deconvolution result')
     else:
         fig = None
-    plt.plot(gunE - vs, ys, 'r')
+    plt.plot(gunE - vs, ys, colstr)
     #Confidence intervals
     if not only_mean :
         plt.plot(gunE - aa.dat.value()['vs'].values, phi(aa.dat.value()['vs'].values), 'g.')
         plt.fill_between(gunE - vs, ys-dy, ys+dy, color='b', alpha=0.5)
-    # Limits
-    if fig is not None and xlim is not None:
+    if xlim is not None:
         fig.axes[0].set_xlim(xlim)
-        fig.axes[1].set_xlim(xlim)
+        if ylim is None:
+            x1,x2 = xlim
+            idx   = ((gunE - vs) >= x1) & ((gunE - vs) <= x2)
+            y1    = np.min((ys - dy)[idx])
+            y2    = np.max((ys + dy)[idx])
+            delta = (y2 - y1) * 0.05
+            ylim  = (y1 - delta, y2 + delta)
+    if ylim is not None:
+        fig.axes[0].set_ylim(ylim)
     plt.grid()
     return fig
 
