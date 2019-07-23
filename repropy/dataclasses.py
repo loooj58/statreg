@@ -37,7 +37,7 @@ def instantiate(cls, dct):
     if getattr(cls, "__origin__", None) is typing.Union :
         for ty in cls.__args__:
             # Dataclasses require tags which are names of data type
-            if is_dataclass(ty):
+            if is_dataclass(ty) and isinstance(dct, dict):
                 if ty.__name__ == dct.get("%tag") :
                     return instantiate(ty, dct)
                 else:
