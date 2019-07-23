@@ -3,7 +3,8 @@ let
   pkgs   = import (builtins.fetchGit {
     name = "19.03";
     url  = https://github.com/nixos/nixpkgs/;
-    ref  = "7e889fe8c81c45faf8c7964cd89eafb1f2cd6ec4";
+    ref  = "release-19.03";
+    rev  = "7e889fe8c81c45faf8c7964cd89eafb1f2cd6ec4";
   }) {
     config = {};
     overlays=[overlay];
